@@ -1,0 +1,23 @@
+# Stack
+
+- Use Next.js App Router
+- Use TypeScript
+- Use Tailwind CSS
+- Use shadcn/ui
+- Use Supabase for auth/database
+- Use server components by default
+- Use server actions when possible
+
+# Code Style
+
+- Keep files under 300 lines
+- Use async/await
+- Avoid any
+- Add loading and error states
+- Use functional React components only
+
+# UI
+
+- Clean SaaS style
+- Mobile responsive
+- Accessible
