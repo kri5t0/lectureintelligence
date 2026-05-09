@@ -8,6 +8,14 @@
 - Use server components by default
 - Use server actions when possible
 
+# Architecture
+
+- Frontend in Next.js
+- AI processing in FastAPI
+- Supabase for auth/storage/database
+- Keep business logic in services
+- Use modular architecture
+
 # Code Style
 
 - Keep files under 300 lines
@@ -16,11 +24,12 @@
 - Add loading and error states
 - Use functional React components only
 
-# General
+# Instructions
 
-- Always reference documentation inside /docs before generating code
-- Follow architecture.md, database-schema.md, and ai-pipeline.md
-
+- Always read the docs folder before generating code
+- Follow architecture.md, database-schema.md and ai-pipeline.md
+- Prefer server components
+- Prefer server actions over API routes where possible
 
 # UI
 
