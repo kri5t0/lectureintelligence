@@ -16,6 +16,12 @@
 - Add loading and error states
 - Use functional React components only
 
+# General
+
+- Always reference documentation inside /docs before generating code
+- Follow architecture.md, database-schema.md, and ai-pipeline.md
+
+
 # UI
 
 - Clean SaaS style
