@@ -1,0 +1,27 @@
+# python/requirements.txt
+#
+# Venv: use a supported Python (e.g. py -3.13 -m venv .venv), not 3.14, then:
+#   .\.venv\Scripts\Activate.ps1
+#   pip install -r requirements.txt
+#
+# PyMuPDF: 1.24.5 often falls back to a source build on Windows (downloads MuPDF; can fail mid-download).
+# 1.24.14+ ships cp39-abi3 Windows wheels that install cleanly on 3.11–3.13.
+#
+# pytesseract / Pillow: used by parsers/pdf_parser.py for the scanned-PDF OCR
+# fallback. pytesseract is only a Python wrapper — the `tesseract` binary must
+# also be installed on the system (Windows: https://github.com/UB-Mannheim/tesseract/wiki,
+# macOS: `brew install tesseract`, Debian/Ubuntu: `apt install tesseract-ocr`).
+# Pillow: 12.0.0 is the first release with Python 3.14 Windows wheels; older
+# pins (e.g. 10.4.0) fall back to a source build on 3.14 and fail.
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+pymupdf==1.24.14
+python-pptx==0.6.23
+openai==1.35.0
+anthropic==0.29.0
+supabase==2.5.0
+ffmpeg-python==0.2.0
+genanki==0.13.0
+python-multipart==0.0.9
+pytesseract==0.3.10
+Pillow==12.2.0
