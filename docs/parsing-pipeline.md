@@ -336,11 +336,13 @@ def save_chunks(upload_id: str, user_id: str, chunks: list[dict]):
 
 ## Python Requirements
 
+Use a supported Python (e.g. 3.11–3.13) in a venv. On Windows, **pymupdf 1.24.14** ships prebuilt wheels (`cp39-abi3`); **1.24.5** often forces a source build that downloads MuPDF and can fail mid-download.
+
 ```
 # python/requirements.txt
 fastapi==0.111.0
 uvicorn[standard]==0.30.1
-pymupdf==1.24.5
+pymupdf==1.24.14
 python-pptx==0.6.23
 openai==1.35.0
 anthropic==0.29.0
