@@ -76,6 +76,7 @@ Return a JSON array. Each object must have exactly these fields:
 If a string must contain a double quote, escape it with a backslash. Do not put raw line breaks inside JSON string values.
 
 Difficulty distribution: 40% recall (1–2), 40% understanding (3), 20% application (4–5).
+Where the answer or question contains equations, formulae, chemical notation, or mathematical symbols, write them using LaTeX. Use \\(...\\) for inline expressions and \\[...\\] for display expressions. Plain text for everything else — do not wrap non-mathematical content in LaTeX.
 Write questions that match the register of university-level exam questions.
 Do not generate trivial questions (e.g. "What is X?" when X was defined in one line).
 Prefer questions that require the student to explain, compare, or apply."""

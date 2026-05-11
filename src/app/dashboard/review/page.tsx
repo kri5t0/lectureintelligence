@@ -30,6 +30,9 @@ export default async function ReviewPage() {
             Lecture Intelligence
           </Link>
           <div className="flex gap-2">
+            <Button variant="default" size="sm" asChild>
+              <a href="/api/cards/export-anki">Export Anki</a>
+            </Button>
             <Button variant="outline" size="sm" asChild>
               <Link href="/dashboard">Dashboard</Link>
             </Button>

@@ -7,6 +7,8 @@ import {
   type KeyboardEvent,
 } from "react"
 import Link from "next/link"
+import katex from "katex"
+import "katex/dist/katex.min.css"
 
 import { cn } from "@/lib/utils"
 
@@ -27,6 +29,114 @@ const QUALITY_LABELS: Record<number, string> = {
   3: "Hard",
   4: "Good",
   5: "Easy",
+}
+
+const MATH_DELIMITERS = [
+  { open: "\\[", close: "\\]", displayMode: true },
+  { open: "\\(", close: "\\)", displayMode: false },
+  { open: "$", close: "$", displayMode: false },
+] as const
+
+function isEscaped(text: string, index: number) {
+  let slashCount = 0
+  for (let i = index - 1; i >= 0 && text[i] === "\\"; i -= 1) {
+    slashCount += 1
+  }
+  return slashCount % 2 === 1
+}
+
+function findToken(text: string, token: string, from: number, skipEscaped: boolean) {
+  let index = text.indexOf(token, from)
+  while (index !== -1) {
+    if (!skipEscaped || !isEscaped(text, index)) return index
+    index = text.indexOf(token, index + token.length)
+  }
+  return -1
+}
+
+function escapeHtml(text: string) {
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+}
+
+function findNextMathSegment(text: string, from: number) {
+  let searchFrom = from
+
+  while (searchFrom < text.length) {
+    let next:
+      | {
+          start: number
+          open: string
+          close: string
+          displayMode: boolean
+        }
+      | null = null
+
+    for (const delimiter of MATH_DELIMITERS) {
+      const start = findToken(text, delimiter.open, searchFrom, delimiter.open === "$")
+      if (start !== -1 && (!next || start < next.start)) {
+        next = { start, ...delimiter }
+      }
+    }
+
+    if (!next) return null
+
+    const contentStart = next.start + next.open.length
+    const end = findToken(text, next.close, contentStart, next.close === "$")
+
+    if (end !== -1) {
+      return {
+        start: next.start,
+        end: end + next.close.length,
+        expression: text.slice(contentStart, end),
+        displayMode: next.displayMode,
+      }
+    }
+
+    searchFrom = contentStart
+  }
+
+  return null
+}
+
+function renderMathText(text: string) {
+  const html: string[] = []
+  let index = 0
+  let segment = findNextMathSegment(text, index)
+
+  while (segment) {
+    html.push(escapeHtml(text.slice(index, segment.start)))
+
+    try {
+      html.push(
+        katex.renderToString(segment.expression, {
+          displayMode: segment.displayMode,
+          throwOnError: true,
+        }),
+      )
+    } catch {
+      html.push(escapeHtml(text.slice(segment.start, segment.end)))
+    }
+
+    index = segment.end
+    segment = findNextMathSegment(text, index)
+  }
+
+  html.push(escapeHtml(text.slice(index)))
+  return html.join("")
+}
+
+function MathText({ className, text }: { className?: string; text: string }) {
+  return (
+    <span
+      className={className}
+      dangerouslySetInnerHTML={{ __html: renderMathText(text) }}
+    />
+  )
 }
 
 export function FlashcardReview() {
@@ -221,9 +331,10 @@ export function FlashcardReview() {
             <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Question
             </span>
-            <span className="mt-3 flex-1 text-base leading-relaxed text-foreground">
-              {current.question}
-            </span>
+            <MathText
+              className="mt-3 flex-1 text-base leading-relaxed text-foreground"
+              text={current.question}
+            />
             <span className="mt-4 text-xs text-muted-foreground">
               Click or press Enter to reveal the answer
             </span>
@@ -233,9 +344,10 @@ export function FlashcardReview() {
             <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Answer
             </span>
-            <span className="mt-3 flex-1 text-base leading-relaxed text-foreground">
-              {current.answer}
-            </span>
+            <MathText
+              className="mt-3 flex-1 text-base leading-relaxed text-foreground"
+              text={current.answer}
+            />
             <span className="mt-4 text-xs text-muted-foreground">
               Click to flip back to the question
             </span>

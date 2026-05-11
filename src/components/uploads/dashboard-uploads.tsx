@@ -423,6 +423,11 @@ export function DashboardUploads({
                     <Button variant="secondary" size="sm" asChild>
                       <Link href="/dashboard/review">Study flashcards</Link>
                     </Button>
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={`/api/cards/export-anki?uploadId=${encodeURIComponent(u.id)}`}>
+                        Export Anki
+                      </a>
+                    </Button>
                   </div>
                 ) : null}
               </li>
