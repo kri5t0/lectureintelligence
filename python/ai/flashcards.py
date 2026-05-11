@@ -7,10 +7,11 @@ import os
 import re
 import sys
 import time
-from pathlib import Path
 from typing import Any, Callable, TypeVar
 
 import anthropic
+
+from bootstrap_env import load_missing_env_from_dotenv_files
 
 T = TypeVar("T")
 
@@ -24,31 +25,7 @@ def _maybe_load_dotenv() -> None:
     """
     if os.environ.get("ANTHROPIC_API_KEY", "").strip():
         return
-    python_dir = Path(__file__).resolve().parent.parent
-    repo_root = python_dir.parent
-    for path in (python_dir / ".env", repo_root / ".env", repo_root / ".env.local"):
-        if not path.is_file():
-            continue
-        try:
-            text = path.read_text(encoding="utf-8-sig")
-        except OSError:
-            continue
-        for raw_line in text.splitlines():
-            line = raw_line.strip()
-            if not line or line.startswith("#"):
-                continue
-            if line.lower().startswith("export "):
-                line = line[7:].lstrip()
-            if "=" not in line:
-                continue
-            key, _, value = line.partition("=")
-            key = key.strip()
-            if not key or key in os.environ:
-                continue
-            value = value.strip()
-            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
-                value = value[1:-1]
-            os.environ[key] = value
+    load_missing_env_from_dotenv_files()
 
 
 def _get_client() -> anthropic.Anthropic:
@@ -75,7 +52,16 @@ def _get_client() -> anthropic.Anthropic:
 # Deprecated IDs such as claude-sonnet-4-20250514 may return 404. Override if needed:
 #   set ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
 MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
-MAX_TOKENS = 2000
+# Output budget: truncated JSON (Unterminated string) happens if this is too small for N cards.
+_MAX_OUT_CAP = int(os.environ.get("ANTHROPIC_MAX_OUTPUT_TOKENS", "8192"))
+
+
+def _flashcard_max_output_tokens(n_cards: int) -> int:
+    cap = max(512, min(_MAX_OUT_CAP, 16384))
+    # ~350–500 tokens per card including JSON syntax; keep headroom.
+    need = max(2048, 420 * max(1, n_cards))
+    return min(cap, need)
+
 
 FLASHCARD_SYSTEM = """You are an expert university tutor creating revision flashcards.
 
@@ -83,9 +69,11 @@ Output ONLY valid JSON — no markdown fences, no preamble, no explanation.
 
 Return a JSON array. Each object must have exactly these fields:
   - "question":   string — specific, tests a single concept
-  - "answer":     string — 2–4 complete sentences, accurate and concise
+  - "answer":     string — 2–4 complete sentences, accurate and concise (each answer under ~450 characters so the full JSON fits)
   - "difficulty": integer — 1 (recall) to 5 (application/synthesis)
   - "tags":       array of 2–4 topic keyword strings
+
+If a string must contain a double quote, escape it with a backslash. Do not put raw line breaks inside JSON string values.
 
 Difficulty distribution: 40% recall (1–2), 40% understanding (3), 20% application (4–5).
 Write questions that match the register of university-level exam questions.
@@ -190,9 +178,11 @@ def _generate_flashcards_once(
         f"Generate {n_cards} flashcards covering the key concepts above."
     )
 
+    max_tokens = _flashcard_max_output_tokens(n_cards)
     response = _get_client().messages.create(
         model=MODEL,
-        max_tokens=MAX_TOKENS,
+        max_tokens=max_tokens,
+        temperature=0.2,
         system=FLASHCARD_SYSTEM,
         messages=[{"role": "user", "content": user_content}],
     )

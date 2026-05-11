@@ -41,9 +41,14 @@ export default async function DashboardPage() {
           >
             Lecture Intelligence
           </Link>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/">Home</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="default" size="sm" asChild>
+              <Link href="/dashboard/review">Review</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/">Home</Link>
+            </Button>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
@@ -53,7 +58,14 @@ export default async function DashboardPage() {
           </h1>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
             Upload lecture materials. Processing starts automatically after each
-            file lands in storage.
+            file lands in storage. When a row shows Ready, open{" "}
+            <Link
+              href="/dashboard/review"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              Review
+            </Link>{" "}
+            to study flashcards that are due.
           </p>
         </div>
         <DashboardUploads userId={user.id} initialUploads={uploads} />

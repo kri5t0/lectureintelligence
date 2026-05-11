@@ -1,9 +1,11 @@
 "use client"
 
 import * as React from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Upload, FileUp } from "lucide-react"
-import { prepareUpload, startProcessing } from "@/actions/uploads"
+import { clearProblemUploads, prepareUpload, startProcessing } from "@/actions/uploads"
+import { isClearableUploadStatus } from "@/lib/uploads/clearable-upload-status"
 import { uploadFileWithProgress } from "@/lib/uploads/upload-with-progress"
 import { supabase } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -58,7 +60,13 @@ export function DashboardUploads({
   const [optimistic, setOptimistic] = React.useState<OptimisticRow[]>([])
   const [subject, setSubject] = React.useState("")
   const [dragActive, setDragActive] = React.useState(false)
+  const [clearing, setClearing] = React.useState(false)
+  const [clearMessage, setClearMessage] = React.useState<string | null>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
+
+  const clearableCount = uploads.filter((u) =>
+    isClearableUploadStatus(u.status)
+  ).length
 
   React.useEffect(() => {
     setUploads(initialUploads)
@@ -188,6 +196,29 @@ export function DashboardUploads({
     e.target.value = ""
   }
 
+  async function onClearProblemUploads() {
+    if (clearableCount === 0 || clearing) return
+    const confirmed = window.confirm(
+      `Remove ${clearableCount} upload${clearableCount === 1 ? "" : "s"} that never completed successfully? This includes rows in Queued, Parsing, Generating, or Error. Rows marked Ready are kept. Storage files for those uploads are deleted too.`
+    )
+    if (!confirmed) return
+    setClearing(true)
+    setClearMessage(null)
+    try {
+      const res = await clearProblemUploads()
+      if (!res.ok) {
+        setClearMessage(res.message)
+        return
+      }
+      if (res.removed === 0) {
+        setClearMessage("Nothing matched to clear.")
+      }
+      router.refresh()
+    } finally {
+      setClearing(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-10">
       <Card className="border-border/80 shadow-sm">
@@ -195,7 +226,14 @@ export function DashboardUploads({
           <CardTitle>New lecture</CardTitle>
           <CardDescription>
             Drop slides or recordings. Files upload directly to secure storage,
-            then processing runs in the background.
+            then processing runs in the background. When status is Ready, use{" "}
+            <Link
+              href="/dashboard/review"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              Review
+            </Link>{" "}
+            to study generated flashcards.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-6">
@@ -279,14 +317,34 @@ export function DashboardUploads({
       </Card>
 
       <section aria-labelledby="uploads-heading">
-        <div className="mb-4 flex items-end justify-between gap-4">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <h2
             id="uploads-heading"
             className="font-heading text-lg font-semibold tracking-wide uppercase"
           >
             Your uploads
           </h2>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={clearableCount === 0 || clearing}
+            onClick={() => void onClearProblemUploads()}
+            className="shrink-0 self-start sm:self-auto"
+          >
+            {clearing
+              ? "Clearing…"
+              : `Clear failed & stuck${clearableCount > 0 ? ` (${clearableCount})` : ""}`}
+          </Button>
         </div>
+        {clearMessage ? (
+          <p
+            role="alert"
+            className="mb-3 text-sm text-destructive"
+          >
+            {clearMessage}
+          </p>
+        ) : null}
 
         <ul className="flex flex-col gap-2">
           {optimistic
@@ -355,6 +413,17 @@ export function DashboardUploads({
                   <p role="alert" className="text-xs text-destructive">
                     {u.error_message}
                   </p>
+                ) : null}
+                {u.status === "done" ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-3 border-t border-border pt-2">
+                    <p className="text-xs text-muted-foreground">
+                      {u.chunk_count} excerpt{u.chunk_count === 1 ? "" : "s"} ·{" "}
+                      {u.card_count} flashcard{u.card_count === 1 ? "" : "s"}
+                    </p>
+                    <Button variant="secondary" size="sm" asChild>
+                      <Link href="/dashboard/review">Study flashcards</Link>
+                    </Button>
+                  </div>
                 ) : null}
               </li>
             )

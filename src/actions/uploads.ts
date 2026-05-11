@@ -1,5 +1,6 @@
 "use server"
 
+import { CLEARABLE_UPLOAD_STATUSES } from "@/lib/uploads/clearable-upload-status"
 import { createServerSupabaseClient } from "@/lib/supabase/server"
 import { enqueueProcessingJob } from "@/lib/processing/enqueue-job"
 import {
@@ -166,4 +167,69 @@ export async function startProcessing(
   })
 
   return { ok: true }
+}
+
+export type ClearProblemUploadsResult =
+  | { ok: true; removed: number }
+  | { ok: false; message: string }
+
+/**
+ * Delete failed or in-progress uploads for the signed-in user, including the
+ * file in storage. Completed (`done`) uploads are never removed here.
+ */
+export async function clearProblemUploads(): Promise<ClearProblemUploadsResult> {
+  const supabase = await createServerSupabaseClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { ok: false, message: "You must be signed in." }
+  }
+
+  const { data: rows, error: queryError } = await supabase
+    .from("uploads")
+    .select("id, storage_path")
+    .eq("user_id", user.id)
+    .in("status", [...CLEARABLE_UPLOAD_STATUSES])
+
+  if (queryError) {
+    return {
+      ok: false,
+      message: queryError.message || "Could not list uploads to clear.",
+    }
+  }
+
+  if (!rows?.length) {
+    return { ok: true, removed: 0 }
+  }
+
+  const paths = rows
+    .map((r) => r.storage_path)
+    .filter((p): p is string => typeof p === "string" && p.length > 0)
+
+  if (paths.length > 0) {
+    const { error: storageError } = await supabase.storage
+      .from(BUCKET)
+      .remove(paths)
+    if (storageError) {
+      console.error("clearProblemUploads: storage remove", storageError)
+    }
+  }
+
+  const ids = rows.map((r) => r.id)
+  const { error: deleteError } = await supabase
+    .from("uploads")
+    .delete()
+    .eq("user_id", user.id)
+    .in("id", ids)
+
+  if (deleteError) {
+    return {
+      ok: false,
+      message: deleteError.message || "Could not remove upload records.",
+    }
+  }
+
+  return { ok: true, removed: ids.length }
 }

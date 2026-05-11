@@ -6,6 +6,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react"
+import Link from "next/link"
 
 import { cn } from "@/lib/utils"
 
@@ -152,15 +153,25 @@ export function FlashcardReview() {
       <div className="rounded-2xl border border-border bg-card p-10 text-center shadow-sm">
         <p className="text-lg font-medium text-foreground">You&apos;re all caught up</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          No flashcards are due for review right now.
+          No flashcards are due for review right now. New cards from a finished
+          upload usually appear here the same calendar day (UTC); try Refresh
+          after processing completes.
         </p>
-        <button
-          type="button"
-          onClick={() => void loadDue()}
-          className="mt-6 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm transition hover:bg-muted"
-        >
-          Refresh
-        </button>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => void loadDue()}
+            className="rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium shadow-sm transition hover:bg-muted"
+          >
+            Refresh
+          </button>
+          <Link
+            href="/dashboard"
+            className="rounded-lg border border-border bg-muted/50 px-4 py-2 text-sm font-medium shadow-sm transition hover:bg-muted"
+          >
+            Dashboard
+          </Link>
+        </div>
       </div>
     )
   }
