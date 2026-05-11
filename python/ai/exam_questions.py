@@ -9,7 +9,8 @@ from typing import Any
 
 from .flashcards import MODEL, _get_client, _safe_json_parse, call_with_retry
 
-MAX_TOKENS = 3000
+# Seven questions with long mark schemes need a generous budget; 3000 often truncates mid-JSON.
+MAX_TOKENS = int(os.environ.get("ANTHROPIC_EXAM_MAX_TOKENS", "8192"))
 
 EXAM_SYSTEM = """You are an experienced university examiner writing exam questions.
 
@@ -30,7 +31,9 @@ Mark scheme quality standards:
   - Short answer: list 3–5 specific marking points; award 1 mark per point
   - Essay: use band descriptors (First: 70–100%, 2:1: 60–69%, 2:2: 50–59%, Third: 40–49%)
 
-MCQ distractors must be plausible — not obviously wrong. Use common misconceptions."""
+MCQ distractors must be plausible — not obviously wrong. Use common misconceptions.
+
+Critical: output must be parseable JSON. Inside every string value, escape double quotes as \\" and use \\n for line breaks—never emit raw newlines or unescaped quotes inside a JSON string."""
 
 
 def _response_text(response: object) -> str:
@@ -134,11 +137,20 @@ def _generate_exam_questions_once(
                     "- 4 MCQ questions (2 marks each)\n"
                     "- 2 short-answer questions (5 marks each, ~150 words expected)\n"
                     "- 1 essay question (15 marks, ~600 words expected)\n\n"
-                    "Include a full mark scheme for each question."
+                    "Include a full mark scheme for each question.\n\n"
+                    "Keep mark_scheme text detailed but concise so the full array fits in one JSON "
+                    "document with properly escaped strings only."
                 ),
             }
         ],
     )
+
+    stop_reason = getattr(response, "stop_reason", None)
+    if stop_reason == "max_tokens":
+        raise ValueError(
+            "exam questions response hit max_tokens (JSON likely truncated); "
+            "raise ANTHROPIC_EXAM_MAX_TOKENS or shorten mark schemes in a retry."
+        )
 
     text = _response_text(response)
     parsed = _safe_json_parse(text)
