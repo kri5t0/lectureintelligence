@@ -1,0 +1,33 @@
+8/5/2026:
+Product / feature: Lecture Intelligence upload pipeline on Next.js App Router (TypeScript, Tailwind, shadcn/ui).
+
+What shipped:
+
+- Dashboard (/dashboard) with drag-and-drop (and file picker), optional subject field, upload list with status.
+- Supabase: @supabase/ssr — browser client (src/lib/supabase/client.ts), server client (src/lib/supabase/server.ts), middleware.ts for session refresh + protecting /dashboard.
+- Flow: prepareUpload server action → insert uploads row → createSignedUploadUrl → browser XHR PUT for upload progress → startProcessing sets processing_parse and enqueues FastAPI via after() + PYTHON_SERVICE_URL / INTERNAL_API_KEY (src/lib/processing/enqueue-job.ts).
+- UX: optimistic rows (preparing / uploading / starting), Realtime on uploads for refreshes, loading.tsx on dashboard.
+- Removed monolithic src/lib/supabase.ts in favor of client + server.
+- Docs under docs/ (architecture, DB schema, AI/parsing/product PRD, SM-2, etc.) and @supabase/ssr in package.json.
+- Git: Committed on master as 32591db (“Add lecture upload pipeline with Supabase storage and processing enqueue”) and pushed to origin/master (lectureintelligence). src/types/uploads.ts was included as the truncated “+1” file so imports typecheck.
+
+Env expectations: NEXT_PUBLIC_SUPABASE_*, optional PYTHON_SERVICE_URL + INTERNAL_API_KEY; Supabase uploads bucket + uploads table + RLS per docs/database-schema.md.
+
+9/5/2026:
+Here’s a short recap of what’s in place:
+
+Supabase migration:
+- Added supabase/migrations/20260509120000_database_schema.sql, generated from docs/database-schema.md only.
+- It defines the six app tables (uploads, chunks, cards, exam_questions, concept_maps, review_sessions) with the documented columns, FKs, defaults, and indexes.
+- Enables RLS on those tables and adds the "own data" policies (user_id = auth.uid()).
+- Creates the private uploads storage bucket and the "own files" policy on storage.objects (first path segment = user id), matching the doc.
+
+Git:
+- You’re on cursor/supabase-schema-migration (not master).
+- Latest commit: ab653fe — “Add Supabase schema migration and update project rules” — includes that migration plus .cursor/rules/project.mdc changes. Not pushed.
+
+What you do next for the app:
+
+- Apply the migration to your Supabase project (CLI db push / SQL editor / linked project workflow).
+- Keep uploading to paths like uploads/{user_id}/{upload_id}/... so storage RLS stays valid.
+- That’s the scope of this work; everything else in the app (dashboard, enqueue, etc.) is unchanged by these steps aside from having a repeatable schema file to run.
