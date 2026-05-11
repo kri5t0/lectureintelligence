@@ -17,5 +17,9 @@ def parse_upload(path: str) -> list[dict]:
         from parsers.pptx_parser import parse_pptx
 
         return parse_pptx(path)
+    elif ext in {".mp4", ".mov", ".mkv", ".webm", ".mp3", ".m4a", ".wav"}:
+        from parsers.audio_parser import transcribe_lecture
+
+        return transcribe_lecture(path)
     else:
         raise ValueError(f"Unsupported file type: {ext}")
