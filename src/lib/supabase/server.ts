@@ -26,3 +26,8 @@ export const createClient = (cookieStore: Awaited<ReturnType<typeof cookies>>) =
     },
   );
 };
+
+export async function createServerSupabaseClient() {
+  const cookieStore = await cookies();
+  return createClient(cookieStore);
+}
