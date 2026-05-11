@@ -7,15 +7,74 @@ import os
 import re
 import sys
 import time
+from pathlib import Path
 from typing import Any, Callable, TypeVar
 
 import anthropic
 
 T = TypeVar("T")
 
-client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from env
+_client: anthropic.Anthropic | None = None
 
-MODEL = "claude-sonnet-4-20250514"
+
+def _maybe_load_dotenv() -> None:
+    """
+    If ANTHROPIC_API_KEY is unset, try KEY=value lines from common env files.
+    Does not override variables already set in the process environment.
+    """
+    if os.environ.get("ANTHROPIC_API_KEY", "").strip():
+        return
+    python_dir = Path(__file__).resolve().parent.parent
+    repo_root = python_dir.parent
+    for path in (python_dir / ".env", repo_root / ".env", repo_root / ".env.local"):
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8-sig")
+        except OSError:
+            continue
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.lower().startswith("export "):
+                line = line[7:].lstrip()
+            if "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            key = key.strip()
+            if not key or key in os.environ:
+                continue
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                value = value[1:-1]
+            os.environ[key] = value
+
+
+def _get_client() -> anthropic.Anthropic:
+    """Lazy client so importing this module (e.g. for fixture validation) does not require ANTHROPIC_API_KEY."""
+    global _client
+    if _client is None:
+        _maybe_load_dotenv()
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        if not api_key:
+            raise RuntimeError(
+                "ANTHROPIC_API_KEY is not set for this process. The Anthropic console does not "
+                "inject keys into PowerShell automatically.\n"
+                "Fix one of:\n"
+                "  • Same terminal, before running:  $env:ANTHROPIC_API_KEY = 'sk-ant-...'\n"
+                "  • Or add a line to python/.env or repo-root .env / .env.local:\n"
+                "      ANTHROPIC_API_KEY=sk-ant-...\n"
+                "    (those files are gitignored; restart the command after saving.)"
+            )
+        _client = anthropic.Anthropic(api_key=api_key)
+    return _client
+
+
+# Default: current Claude Sonnet on the Messages API (see Anthropic model overview).
+# Deprecated IDs such as claude-sonnet-4-20250514 may return 404. Override if needed:
+#   set ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
 MAX_TOKENS = 2000
 
 FLASHCARD_SYSTEM = """You are an expert university tutor creating revision flashcards.
@@ -44,7 +103,12 @@ def call_with_retry(
     for attempt in range(retries):
         try:
             return fn(*args, **kwargs)
-        except (json.JSONDecodeError, anthropic.APIError, AssertionError) as e:
+        except (
+            json.JSONDecodeError,
+            anthropic.APIError,
+            AssertionError,
+            ValueError,
+        ) as e:
             if attempt == retries - 1:
                 raise
             wait = 2**attempt
@@ -99,6 +163,14 @@ def _validate_flashcards(data: Any) -> list[dict[str, Any]]:
     return data
 
 
+def validate_stored_flashcards(data: Any) -> list[dict[str, Any]]:
+    """
+    Validate JSON-decoded flashcards against the same schema as Claude output.
+    Use for tests and for checking fixtures without calling the API.
+    """
+    return _validate_flashcards(data)
+
+
 def _generate_flashcards_once(
     chunks: list[dict[str, Any]],
     subject: str,
@@ -118,7 +190,7 @@ def _generate_flashcards_once(
         f"Generate {n_cards} flashcards covering the key concepts above."
     )
 
-    response = client.messages.create(
+    response = _get_client().messages.create(
         model=MODEL,
         max_tokens=MAX_TOKENS,
         system=FLASHCARD_SYSTEM,

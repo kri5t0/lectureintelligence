@@ -1,0 +1,14 @@
+[
+  {
+    "question": "What is the mechanism of action of beta-blockers?",
+    "answer": "Beta-blockers competitively antagonise catecholamines at beta-adrenergic receptors. By blocking beta-1 receptors in the heart, they reduce heart rate and contractility, lowering cardiac output and blood pressure.",
+    "difficulty": 2,
+    "tags": ["beta-blockers", "pharmacodynamics", "cardiovascular"]
+  },
+  {
+    "question": "A patient on propranolol presents with acute bronchospasm. Explain the mechanism and management.",
+    "answer": "Propranolol is a non-selective beta-blocker that blocks both beta-1 (cardiac) and beta-2 (bronchial smooth muscle) receptors. Blockade of beta-2 receptors prevents bronchodilation, precipitating bronchospasm in susceptible patients. Management: stop propranolol, administer ipratropium (anticholinergic, beta-2-independent) rather than salbutamol.",
+    "difficulty": 5,
+    "tags": ["propranolol", "adverse effects", "bronchospasm", "clinical"]
+  }
+]
