@@ -210,8 +210,10 @@ export function DashboardUploads({
             />
           </div>
 
-          <button
-            type="button"
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="Upload files: drag and drop here, or click to choose"
             onDragEnter={(e) => {
               e.preventDefault()
               setDragActive(true)
@@ -228,8 +230,15 @@ export function DashboardUploads({
             }}
             onDrop={onDrop}
             onClick={() => inputRef.current?.click()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                inputRef.current?.click()
+              }
+            }}
             className={cn(
               "flex min-h-44 cursor-pointer flex-col items-center justify-center gap-3 border-2 border-dashed px-6 py-10 text-center transition-colors",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               dragActive
                 ? "border-primary bg-primary/5"
                 : "border-border bg-muted/30 hover:bg-muted/50"
@@ -251,11 +260,13 @@ export function DashboardUploads({
               variant="outline"
               size="sm"
               className="pointer-events-none"
+              tabIndex={-1}
+              aria-hidden
             >
               <FileUp className="size-3.5" aria-hidden />
               Choose files
             </Button>
-          </button>
+          </div>
           <input
             ref={inputRef}
             type="file"
