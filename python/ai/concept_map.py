@@ -7,11 +7,8 @@ import os
 import sys
 from typing import Any
 
-import anthropic
+from .flashcards import MODEL, _get_client, _safe_json_parse, call_with_retry
 
-from .flashcards import call_with_retry
-
-MODEL = "claude-sonnet-4-20250514"
 MAX_TOKENS = 1500
 
 CONCEPT_MAP_SYSTEM = """You are an expert at constructing concept maps from academic content.
@@ -38,8 +35,6 @@ Constraints:
   - No isolated nodes
   - Prefer edges that show mechanism or causality over simple "related to" edges
   - "example" nodes should connect to their parent concept with "is an example of" """
-
-client = anthropic.Anthropic()
 
 
 def _response_text(response: object) -> str:
@@ -114,7 +109,7 @@ def _validate_concept_map(data: Any) -> dict[str, Any]:
 def _generate_concept_map_once(chunks: list[dict], subject: str) -> dict[str, Any]:
     combined = "\n\n".join(c["text"] for c in chunks[:12])
 
-    response = client.messages.create(
+    response = _get_client().messages.create(
         model=MODEL,
         max_tokens=MAX_TOKENS,
         system=CONCEPT_MAP_SYSTEM,
@@ -131,7 +126,7 @@ def _generate_concept_map_once(chunks: list[dict], subject: str) -> dict[str, An
     )
 
     text = _response_text(response)
-    parsed = json.loads(text)
+    parsed = _safe_json_parse(text)
     return _validate_concept_map(parsed)
 
 

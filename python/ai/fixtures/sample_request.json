@@ -1,0 +1,24 @@
+{
+  "subject": "Pharmacology",
+  "n_cards": 2,
+  "chunks": [
+    {
+      "source": "fixtures/sample_request.json",
+      "page_or_slide": 1,
+      "type": "heading",
+      "text": "Beta-adrenergic blockade"
+    },
+    {
+      "source": "fixtures/sample_request.json",
+      "page_or_slide": 1,
+      "type": "body",
+      "text": "Beta-blockers competitively antagonise catecholamines at beta-adrenergic receptors. Non-selective agents such as propranolol block beta-1 receptors in the heart and beta-2 receptors in bronchial smooth muscle, which can precipitate bronchospasm in susceptible patients."
+    },
+    {
+      "source": "fixtures/sample_request.json",
+      "page_or_slide": 2,
+      "type": "notes",
+      "text": "Exam tip: contrast cardioselective agents with propranolol when discussing respiratory risk."
+    }
+  ]
+}
